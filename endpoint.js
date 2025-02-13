@@ -1,6 +1,6 @@
 const express = require("express");
 const db = require("./db");
-const {VerifyToken, verifyToken} = require("./middleware");
+const {verifyToken} = require("./middleware");
 const router = express.Router();
 const bcrypt = require("bcrypt");
 // npm install jsonwebtoken
@@ -14,7 +14,7 @@ const {sign} = require("jsonwebtoken");
 * Get /api/produits
 */
 
-router.get("/produits", verifyToken(req, res) => {
+router.get("/produits", verifyToken, (req, res) => {
     db.query("SELECT * FROM produits", (error, result) => {
         if (error){
             return(res.status(500).json({message : "Erreur du serveur"}));
@@ -224,7 +224,7 @@ router.post("/client/login", (req, res) => {
         const token = sign(
             {id: client.clientID, email: client.email},
             process.env.JWT_SECRET,
-            {expiresIn: process.env.JWT_EXPIRES_IN},
+            {expiresIn: "2h"},
         );
 
         res.json({
