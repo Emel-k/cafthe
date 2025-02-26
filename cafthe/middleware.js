@@ -1,21 +1,21 @@
-const express = require("express");
-// mpn install cors
-const cors = require("cors");
-// npm install dotenv
+const jwt = require("jsonwebtoken");
 
-const db = require("./db"); // Connexion à MySQL
-const routes = require("./endpoint"); // Les routes de l'API
+// Middleware pour la protection des routes
+const verifyToken = (req, res, next) => {
+    const token = req.headers["authorization"];
 
-const app = express();
-app.use(express.json());
-app.use(cors());
+    if (!token) {
+        return res.status(403).json({ message: "Token manquant" });
+    }
 
-// Utilisation des routes
-app.use("/api", routes);
+    jwt.verify(token.split(" ")[1], process.env.JWT_SECRET, (err, decoded) => {
+        if (err) {
+            return res.status(401).json({ message: "Token invalide" });
+        }
 
-// Démarrer le serveur
-const PORT = process.env.PORT || 3000;
+        req.client = decoded;
+        next();
+    });
+};
 
-app.listen(PORT, () => {
-    console.log(`L'API Caf'the est démarrée sur http://localhost:${PORT}`)
-});
+module.exports = { verifyToken };

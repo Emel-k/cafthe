@@ -3,6 +3,9 @@ const express = require("express");
 const cors = require("cors");
 // npm install dotenv
 
+//const app = require("./middleware"); // On importe l'application avec les middlewares
+
+
 const db = require("./db"); // Connexion à MySQL
 const routes = require("./endpoint"); // Les routes de l'API
 
