@@ -18,9 +18,11 @@ const {response} = require("express");
 router.get("/produits", (req, res) => {
     db.query("SELECT * FROM produits", (error, result) => {
         if (error){
+            console.error("Erreur SQL :", error);
             return(res.status(500).json({message : "Erreur du serveur"}));
         }
         if (result.length === 0){
+            console.log("Résultat SQL :", result);
             return res.status(404).json({message: "Produit non trouvé"});
         }
         res.json(result);
