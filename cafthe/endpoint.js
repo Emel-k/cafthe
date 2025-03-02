@@ -179,7 +179,7 @@ router.post("/produits/add", (req,res) => {
 
 //fiche produit
 router.get("/produits/details/:id", (req, res) => {
-    db.query("SELECT nom, description,prix, typeUnite, typePoids FROM produits where produitsID = ?",[req.params.id], (error, result) => {
+    db.query("SELECT nom, description,prix, typeUnite, typePoids, image FROM produits where produitsID = ?",[req.params.id], (error, result) => {
         if (error){
             return(res.status(500).json({message : "Erreur du serveur"}));
         }
