@@ -7,6 +7,7 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const {sign} = require("jsonwebtoken");
 const {response} = require("express");
+//npm install --save-dev jest
 
 
 
@@ -177,7 +178,7 @@ router.post("/produits/add", (req,res) => {
 
 //fiche produit
 router.get("/produits/details/:id", (req, res) => {
-    db.query("SELECT nom, description,prix, typeUnite, typePoids FROM produits where produitsID = ?",[req.params.id], (error, result) => {
+    db.query("SELECT nom, description, prix, typeUnite, typePoids, image_url FROM produits where produitsID = ?",[req.params.id], (error, result) => {
         if (error){
             return(res.status(500).json({message : "Erreur du serveur"}));
         }
