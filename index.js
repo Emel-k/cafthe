@@ -8,7 +8,10 @@ const routes = require("./endpoint"); // Les routes de l'API
 
 const app = express();
 app.use(express.json());
-app.use(cors());
+app.use(cors({
+    origin: 'https://cafthe.emel.kecebas.dev-campus.fr', // Remplacez par votre domaine frontend
+    credentials: true,
+}));
 
 // Utilisation des routes
 app.use("/api", routes);
