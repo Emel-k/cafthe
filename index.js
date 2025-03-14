@@ -9,13 +9,9 @@ const routes = require("./endpoint"); // Les routes de l'API
 
 const app = express();
 app.use(express.json());
-const allowedOrigins = [
-    'http://localhost:3001', // Autoriser votre frontend
-    'https://cafthe.emel.kecebas.dev-campus.fr', // Autoriser l'autre origine
-];
 
 app.use(cors({
-    origin: allowedOrigins,
+    origin: "*",
     methods: 'GET,POST,PUT,DELETE',
     allowedHeaders: 'Content-Type,Authorization',
 }));
