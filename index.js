@@ -6,11 +6,18 @@ const cors = require("cors");
 const db = require("./db"); // Connexion à MySQL
 const routes = require("./endpoint"); // Les routes de l'API
 
+
 const app = express();
 app.use(express.json());
+const allowedOrigins = [
+    'http://localhost:3001', // Autoriser votre frontend
+    'https://cafthe.emel.kecebas.dev-campus.fr', // Autoriser l'autre origine
+];
+
 app.use(cors({
-    origin: 'https://cafthe.emel.kecebas.dev-campus.fr', // Remplacez par votre domaine frontend
-    credentials: true,
+    origin: allowedOrigins,
+    methods: 'GET,POST,PUT,DELETE',
+    allowedHeaders: 'Content-Type,Authorization',
 }));
 
 // Utilisation des routes
