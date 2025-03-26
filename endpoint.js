@@ -45,7 +45,7 @@ router.get("/vendeur", (req, res) => {
 //liste des commandes client
 
 router.get("/commandes", (req, res) => {
-    db.query("SELECT * FROM commandes", (error, result) => {
+    db.query("SELECT * FROM commandes where clientID = ?" [res.params.id], (error, result) => {
         if (error){
             return(res.status(500).json({message : "Erreur du serveur"}));
         }
@@ -68,40 +68,38 @@ exemple : JSON
 "mot_de_passe": "motdepasse",
 }
 */
+router.post("/client/register", (req, res) => {
+    const { nom_prenom, email, mot_de_passe, date_naissance, telephone } = req.body;
 
-router.post("/client/register", (req,res) => {
-    const {nom_prenom, email, mot_de_passe,code_postal, date_naissance, telephone } = req.body;
-
-    //Controler si le mail est déjà present dans la base de donnée
-    db.query("SELECT * FROM client where email = ?", [email], (error, result) => {
+    // Vérifier si l'email est déjà utilisé
+    db.query("SELECT * FROM client WHERE email = ?", [email], (error, result) => {
         if (error) {
-            return (res.status(500).json({message: "Erreur du serveur"}));
+            return res.status(500).json({ message: "Erreur du serveur" });
         }
         if (result.length > 0) {
-            return res.status(404).json({message: "Cette adresse mail est deja utiliser"});
+            return res.status(400).json({ message: "Cette adresse mail est déjà utilisée" });
         }
 
-    });
-    bcrypt.hash(mot_de_passe, 10, (error, hash) => {
-        if (error) {
-            return res
-                .status(500)
-                .json({message: "Erreur lors du hachage du mot de passe"})
-        }
+        // Hachage du mot de passe
+        bcrypt.hash(mot_de_passe, 10, (error, hash) => {
+            if (error) {
+                return res.status(500).json({ message: "Erreur lors du hachage du mot de passe" });
+            }
 
-        //Insertion nouveau client
-        db.query("INSERT INTO client (nom_prenom, email, mot_de_passe, code_postal, date_naissance, telephone, date_inscription) VALUES (?,?,?,?,?,?, CURRENT_DATE)",
-            [nom_prenom, email, hash, code_postal, date_naissance, telephone],
-            (error, result) => {
-                if (error) {
-                    console.log(error)
-                    return res
-                        .status(500)
-                        .json({message: "Erreur lors de l'inscription"})
+            // Insertion du nouveau client
+            db.query(
+                "INSERT INTO client (nom_prenom, email, mot_de_passe, date_naissance, telephone, date_inscription) VALUES (?, ?, ?, ?, ?, CURRENT_DATE)",
+                [nom_prenom, email, hash, date_naissance, telephone],
+                (error, result) => {
+                    if (error) {
+                        console.log(error);
+                        return res.status(500).json({ message: "Erreur lors de l'inscription" });
+                    }
+                    res.status(201).json({ message: "Inscription réussie", client_id: result.insertId });
                 }
-                res.status(201).json({message: "Inscription réussis", client_id: result.insertId})
-            })
-    })
+            );
+        });
+    });
 });
 
 //Creation d'un nouveau vendeur
@@ -173,8 +171,142 @@ router.post("/produits/add", (req,res) => {
 
 })
 
-//supprimer un produit
+//supprime ou décrémente à  une ligne de commande
 
+router.post("/lignecommande/sub/:produitsID", (req, res) => {
+    const {produitsID} = req.params;
+    const {panierID} = req.body;
+
+    // 1. Vérifier si le produit existe dans le panier
+    db.query(
+        "SELECT * FROM ligne_commande WHERE panierID = ? AND produitsID = ?",
+        [panierID, produitsID],
+        (error, results) => {
+            if (error) {
+                return res.status(500).json({ message: "Erreur du serveur" });
+            }
+
+            if (results.length === 0) {
+                return res.status(404).json({ message: "Produit non trouvé dans le panier" });
+            }
+
+            const produitDansPanier = results[0];
+            const quantiteActuelle = produitDansPanier.qt_produit_line_commande;
+
+            // 2. Logique de suppression conditionnelle
+            if (quantiteActuelle > 1) {
+                // Décrémenter la quantité si > 1
+                db.query(
+                    "UPDATE panier SET qt_produit_line_commande = qt_produit_line_commande - 1 WHERE panierID = ? AND produitsID = ?",
+                    [panierID, produitsID],
+                    (error, updateResult) => {
+                        if (error) {
+                            return res.status(500).json({ message: "Erreur lors de la mise à jour de la quantité" });
+                        }
+
+                        res.status(200).json({
+                            message: "Quantité décrémentée",
+                            nouvelleQuantite: quantiteActuelle - 1
+                        });
+                    }
+                );
+            } else {
+                // Supprimer complètement si quantité = 1
+                db.query(
+                    "DELETE FROM ligne_commande WHERE panierID = ? AND produitsID = ?",
+                    [panierID, produitsID],
+                    (error, deleteResult) => {
+                        if (error) {
+                            return res.status(500).json({ message: "Erreur lors de la suppression du produit" });
+                        }
+
+                        res.status(200).json({ message: "Produit supprimé du panier" });
+                    }
+                );
+            }
+        }
+    );
+});
+
+//ajouter un produit dans ligne de commande
+
+router.post("/lignecommande/add/:produitsID", (req, res) => {
+    const produitsID = parseInt(req.params.produitsID, 10);
+    const { panierID } = req.body;
+
+    console.log("produitsID reçu :", produitsID);
+
+    db.query("SELECT * FROM produits WHERE produitsID = ?", [produitsID], (error, result) => {
+        if (error) {
+            return res.status(500).json({ message: "Erreur du serveur 2" });
+        }
+
+
+        if (result.length === 0) {
+            return res.status(404).json({ message: "Produit non trouvé" });
+        }
+
+        // Maintenant qu'on a un produit valide, on peut l'insérer dans la ligne_commande
+        db.query(
+            "INSERT INTO ligne_commande (panierID, qt_produit_line_commande, prix_unitaire_ligne_commande, produitsID) VALUES (?, ?, ?, ?)",
+            [panierID, 1, result[0].prix, produitsID],
+            (error, insertResult) => {
+                if (error) {
+                    return res.status(500).json({ message: "Erreur lors de l'ajout à la ligne de commande" });
+                }
+                res.json({ message: "Produit ajouté au panier"});
+            }
+        );
+    });
+});
+
+//Pour édit
+
+router.put("/lignecommande/edit", (req, res) => {
+    const { quantite, panierID, produitsID } = req.body;
+
+    db.query(
+        "SELECT * FROM ligne_commande WHERE panierID = ? AND produitsID = ?",
+        [panierID, produitsID],
+        (error, results) => {
+            if (error) {
+                return res.status(500).json({ message: "Erreur du serveur" });
+            }
+
+            if (results.length === 0) {
+                return res.status(404).json({ message: "Produit non trouvé dans le panier" });
+            }
+
+            const produitDansPanier = results[0];
+            const quantiteActuelle = produitDansPanier.qt_produit_line_commande;
+
+            db.query(
+                "SELECT * FROM produits WHERE produitsID = ?",
+                [produitsID],
+                (error, updateResult) => {
+                    if (error) {
+                        return res.status(500).json({ message: "Erreur lors de la mise à jour de la quantité" });
+                    }
+                    if (results[0].quantite <= quantite) {
+                        return res.status(400).json({message : "Pas assez de stock"})
+                    }
+                    else{
+                        db.query(
+                            "UPDATE ligne_commmande set qt_produit_line_commande = ? where produitsID = ? and panierID = ?",
+                            [quantite, panierID, produitsID],
+                            (error, result) => {
+                                if (error) {
+                                    return res.status(500).json({ message: "Erreur lors de la mise à jour de la quantité" });
+                                }
+                                res.json(result)
+                            }
+                        )
+                    }
+                }
+            );
+        }
+    );
+})
 
 //fiche produit
 router.get("/produits/details/:id", (req, res) => {
