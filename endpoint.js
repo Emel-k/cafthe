@@ -44,17 +44,19 @@ router.get("/vendeur", (req, res) => {
 
 //liste des commandes client
 
-router.get("/commandes", (req, res) => {
-    db.query("SELECT * FROM commandes where clientID = ?" [res.params.id], (error, result) => {
-        if (error){
-            return(res.status(500).json({message : "Erreur du serveur"}));
+router.get("/commandes/:id", (req, res) => {
+    const clientID = req.params.id;
+    db.query("SELECT * FROM commandes WHERE clientID = ?", [clientID], (error, result) => {
+        if (error) {
+            return res.status(500).json({ message: "Erreur du serveur" });
         }
-        if (result.length === 0){
-            return res.status(404).json({message: " Commandes non trouvé"});
+        if (result.length === 0) {
+            return res.status(404).json({ message: "Commandes non trouvées" });
         }
         res.json(result);
     });
 });
+
 
 
 /*
@@ -172,6 +174,20 @@ router.post("/produits/add", (req,res) => {
 })
 
 //supprime ou décrémente à  une ligne de commande
+
+router.get("/panier/:id", (req, res) => {
+    const {id} = req.params;
+
+    db.query("SELECT * FROM panier where panierID = ?",[id], (error, result) => {
+        if (error){
+            return(res.status(500).json({message : "Erreur du serveur"}));
+        }
+        if (result.length === 0){
+            return res.status(404).json({message: "Produit non trouvé"});
+        }
+        res.json(result);
+    })
+});
 
 router.post("/lignecommande/sub/:produitsID", (req, res) => {
     const {produitsID} = req.params;
@@ -337,6 +353,41 @@ router.get("/client/details/:id", (req, res) => {
 
 //Route : Connexion d'un client
 
+// router.post("/client/login", (req, res) => {
+//     const {email, mot_de_passe} = req.body;
+//
+//     db.query("SELECT * FROM client where email = ?", [email], (error, result) => {
+//         if (error) return (res.status(500).json({message : "Erreur du serveur"}));
+//
+//         if (result.length === 0) {
+//             return res.status(401).json({message : "Identifiant incorrect"});
+//         }
+//         const client = result[0];
+//
+//         /* Vérification du mot de passe*/
+//         bcrypt.compare(mot_de_passe, client.mot_de_passe, (error, isMatch) => {
+//             if (error) return res.status(500).json({message : "Erreur Serveur"});
+//             if(!isMatch) return res.status(401).json({message : "Mot de Passe incorrect"});
+//         });
+//
+//         //Géneration d'un token JWT
+//         const token = sign(
+//             {id: client.clientID, email: client.email},
+//             process.env.JWT_SECRET,
+//             {expiresIn: "2h"},
+//         );
+//
+//         res.json({
+//             message : "Connexion réussie",
+//             token,
+//             client: {id: client.clientID,
+//                 nom: client.nom_prenom,
+//                 email: client.email,
+//             },
+//         })
+//     });
+// });
+
 router.post("/client/login", (req, res) => {
     const {email, mot_de_passe} = req.body;
 
@@ -354,7 +405,7 @@ router.post("/client/login", (req, res) => {
             if(!isMatch) return res.status(401).json({message : "Mot de Passe incorrect"});
         });
 
-        //Géneration d'un token JWT
+        // Génération d'un token JWT
         const token = sign(
             {id: client.clientID, email: client.email},
             process.env.JWT_SECRET,
@@ -364,7 +415,8 @@ router.post("/client/login", (req, res) => {
         res.json({
             message : "Connexion réussie",
             token,
-            client: {id: client.clientID,
+            client: {
+                id: client.clientID,  // clientID correctement inclus ici
                 nom: client.nom_prenom,
                 email: client.email,
             },
@@ -372,7 +424,8 @@ router.post("/client/login", (req, res) => {
     });
 });
 
-// pwmodif =  password modif
+
+//pwmodif =  password modif
 router.put("/client/pwmodif/:id", (req, res) => {
     const pw = req.body.pw;
 
@@ -410,6 +463,33 @@ router.put("/client/pwmodif/:id", (req, res) => {
         },
 );
 });
+
+//modif client
+router.put("/client/modifier", (req, res) => {
+    const { nom_prenom, date_naissance, telephone, email } = req.body;
+
+    // Vérification si toutes les informations sont fournies
+    if (!nom_prenom || !date_naissance || !telephone || !email) {
+        return res.status(400).json({ message: "Tous les champs sont requis." });
+    }
+
+    // Requête SQL pour mettre à jour les informations du client
+    db.query(
+        "UPDATE client SET nom_prenom = ?, date_naissance = ?, telephone = ?, email = ? WHERE email = ?",
+        [nom_prenom, date_naissance, telephone, email, email],
+        (error, result) => {
+            if (error) {
+                return res.status(500).json({ message: "Erreur du serveur" });
+            }
+            if (result.affectedRows === 0) {
+                return res.status(404).json({ message: "Client non trouvé" });
+            }
+            res.json({ message: "Profil mis à jour avec succès" });
+        }
+    );
+});
+
+
 
 module.exports = router;
 
