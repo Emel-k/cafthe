@@ -173,21 +173,23 @@ router.post("/produits/add", (req,res) => {
 
 })
 
-//supprime ou décrémente à  une ligne de commande
 
-router.get("/panier/:id", (req, res) => {
+// recup toutes les lignes de commande par Id du panier
+
+router.get("/lignecommande/:id", (req, res) => {
     const {id} = req.params;
-
-    db.query("SELECT * FROM panier where panierID = ?",[id], (error, result) => {
-        if (error){
-            return(res.status(500).json({message : "Erreur du serveur"}));
+    db.query("SELECT * FROM ligne_commande where panierID = ?", [id], (error, result) => {
+        if (error) {
+            return res.status(500).json({ message: "Erreur du serveur" });
+        } if (result.length > 0) {
+            return res.status(404).json({message: "Ce panier n'a pas de ligne de commande "});
+        }else{
+            return res.json(result);
         }
-        if (result.length === 0){
-            return res.status(404).json({message: "Produit non trouvé"});
-        }
-        res.json(result);
     })
-});
+})
+
+//supprime ou décrémente et edit à  une ligne de commande
 
 router.post("/lignecommande/sub/:produitsID", (req, res) => {
     const {produitsID} = req.params;
@@ -243,8 +245,6 @@ router.post("/lignecommande/sub/:produitsID", (req, res) => {
         }
     );
 });
-
-//ajouter un produit dans ligne de commande
 
 router.post("/lignecommande/add/:produitsID", (req, res) => {
     const produitsID = parseInt(req.params.produitsID, 10);
@@ -323,6 +323,29 @@ router.put("/lignecommande/edit", (req, res) => {
         }
     );
 })
+
+// recup de la commande en cours d'un client
+
+router.get("/panier/:clientId", (req, res) => {
+    const {clientId} = req.params;
+
+    db.query(`SELECT p.* 
+       FROM panier as p
+       WHERE p.clientID = ?
+       ORDER BY p.panierID DESC
+       LIMIT 1`,
+        [clientId], (error, result) => {
+        if (error){
+            return(res.status(500).json({message : "Erreur du serveur"}));
+        }
+        if (result.length === 0){
+            return res.status(404).json({message: "Produit non trouvé"});
+        }
+        res.json(result);
+    })
+});
+
+
 
 //fiche produit
 router.get("/produits/details/:id", (req, res) => {
